@@ -1,5 +1,5 @@
-# shrine-ftp
-Shrine storage that handles file uploads to an FTP server
+# shrine-sftp
+Shrine storage that handles file uploads to an SFTP server
 
 ## Usage
 Refer to the Shrine [Quick start](http://shrinerb.com/rdoc/files/README_md.html#label-Quick+start) if you need to
@@ -8,9 +8,9 @@ know how to set up storage in the first place.
 ```
 require "shrine"
 require "shrine/storage/file_system"
-require "shrine-ftp"
+require "shrine-sftp"
 
-storage = Shrine::Storage::Ftp.new(
+storage = Shrine::Storage::Sftp.new(
     host: 'ftp.yourhost.com',
     user: 'ftp_user',
     passwd: 'ftp_password',

@@ -1,5 +1,5 @@
 require 'shrine'
-require 'net/ftp'
+require 'net/sftp'
 require 'down'
 
 class Shrine
@@ -12,17 +12,17 @@ class Shrine
     #
     # It is initialized with the following 4 required arguments:
     #
-    #   storage = Shrine::Storage::Ftp.new(
+    #   storage = Shrine::Storage::Sftp.new(
     #     host: "ftp.hosturl.com",
     #     user: "username",
-    #     passwd: "yourpassword",
+    #     password: "yourpassword",
     #     dir: "path/to/upload/files/to"
     #   )
     #
     # It can also take an optional argument `prefix` as the URL or domain
     # to prefix to your file location. This comes in handy when your ftp host
     # and your file prefix url are different, such as if you're using a CDN.
-    class Ftp
+    class Sftp
 
       # Initializes a storage for uploading to Ftp
       #
@@ -43,51 +43,46 @@ class Shrine
       def initialize(host:, user:, password:, dir:, prefix: nil)
         @host = host
         @user = user
-        @passwd = password
+        @password = password
         @dir = dir
         @prefix = prefix || host
       end
 
-      # Starts an FTP connection, changes to the appropriate directory (or creates it),
-      # and uses .putbinaryfile() to upload the file.
       def upload(io, id, shrine_metadata: {}, **upload_options)
         path_and_file = build_path_and_file(io)
-        ftp = Net::FTP.open(@host, @user, @passwd)
-        change_or_create_directory(ftp)
-        ftp.putbinaryfile(path_and_file, id)
+        Net::SFTP.start(@host, @user, @password) do |sftp|
+          sftp.mkdir!(@dir, permissions: 0755)
+          sftp.put_file(path_and_file, id)
+        end
       end
 
-      # Returns the URL of where the file is assumed to be, based on `prefix`
       def url(id, **options)
-        return [@prefix, @dir, id].join('/')
+        [@host, @dir, id].join('/')
       end
 
-      # Downloads the file
+      # Downloads the file to a buffer
       def open(id)
-        Down.download(url(id))
+        Net::SFTP.start(@host, @user, @password) do |sftp|
+          sftp.download!(url(id))
+        end
       end
 
       # Returns a boolean based on whether the file exists/
       def exists?(id)
-        uri = URI(url(id))
-        request = Net::HTTP.new uri.host
-        response = request.request_head uri.path
-        return response.code.to_i != 404
+        Net::SFTP.start(@host, @user, @password) do |sftp|
+          sftp.stat!(url(id))
+        end
       end
 
-      # Deletes the file via FTP.
+      # Deletes the file via SFTP.
       def delete(id)
-        if exists?(id)
-          ftp = Net::FTP.open(@host, @user, @passwd)
-          change_or_create_directory(ftp)
-          ftp.delete(id)
-          return true
+        Net::SFTP.start(@host, @user, @password) do |sftp|
+          sftp.remove!(url(id))
         end
-        return false
       end
 
       def to_s
-        "#<Shrine::Storage::Ftp @host='#{@host}'>"
+        "#<Shrine::Storage::Sftp @host='#{@host}'>"
       end
 
       private
@@ -97,15 +92,6 @@ class Shrine
           return "#{io.storage.directory.to_s}/#{io.id}"
         else
           return io
-        end
-      end
-
-      def change_or_create_directory(ftp)
-        begin
-          ftp.chdir(@dir)
-        rescue Net::FTPPermError
-          ftp.mkdir(@dir)
-          ftp.chdir(@dir)
         end
       end
     end
