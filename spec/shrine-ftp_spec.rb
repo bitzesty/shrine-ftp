@@ -1,4 +1,4 @@
-require 'shrine/storage/sftp'
+require 'shrine/storage/ftp'
 require 'vcr'
 
 VCR.configure do |cfg|
@@ -26,7 +26,7 @@ describe "#upload" do
       expect(mock_ftp).to receive(:chdir).with(dir_name).and_return(true)
       expect(mock_ftp).to receive(:putbinaryfile).with(fake_io, fake_io.id)
 
-      storage = Shrine::Storage::Sftp.new(
+      storage = Shrine::Storage::Ftp.new(
           host: 'fakehost.com',
           user: 'fakeuser',
           password: 'password',
