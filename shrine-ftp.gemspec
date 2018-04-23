@@ -1,13 +1,12 @@
 Gem::Specification.new do |s|
-  s.name        = 'shrine-ftp'
-  s.version     = '0.1.1'
-  s.date        = '2018-02-15'
-  s.summary     = "Shrine storage via FTP"
+  s.name        = 'shrine-ftps'
+  s.version     = '1.0'
+  s.date        = '2018-04-23'
+  s.summary     = "Shrine storage via FTPS"
   s.description = "Shrine storage that uploads files to an FTP server."
-  s.authors     = ["Louise Yang"]
-  s.email       = 'louise.yang@scpr.org'
+  s.authors     = ["Louise Yang", "Bit Zesty"]
+  s.emails      = ['louise.yang@scpr.org', "info@bitzesty.com"]
   s.files       = ["lib/shrine/storage/ftp.rb"]
-  s.homepage    =
-      'http://rubygems.org/gems/shrine-ftp'
-  s.license       = 'MIT'
+  s.homepage    =  'http://rubygems.org/gems/shrine-ftps'
+  s.license     = 'MIT'
 end

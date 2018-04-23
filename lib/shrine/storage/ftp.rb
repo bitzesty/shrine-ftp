@@ -1,6 +1,5 @@
 require 'shrine'
 require 'net/ftp'
-require 'down'
 
 class Shrine
   module Storage
@@ -43,44 +42,71 @@ class Shrine
       def initialize(host:, user:, password:, dir:, prefix: nil)
         @host = host
         @user = user
-        @passwd = password
+        @password = password
         @dir = dir
         @prefix = prefix || host
+      end
+
+      def connection
+        Net::FTP.new(@host, connection_params)
+      end
+
+      def connection_params
+        {
+          port:     port,
+          ssl:      ssl_context_params,
+          passive:  true,
+          username: @user,
+          password: @password
+        }
       end
 
       # Starts an FTP connection, changes to the appropriate directory (or creates it),
       # and uses .putbinaryfile() to upload the file.
       def upload(io, id, shrine_metadata: {}, **upload_options)
         path_and_file = build_path_and_file(io)
-        ftp = Net::FTP.open(@host, @user, @passwd)
+        ftp = connection
         change_or_create_directory(ftp)
         ftp.putbinaryfile(path_and_file, id)
+        ftp.close
       end
 
-      # Returns the URL of where the file is assumed to be, based on `prefix`
       def url(id, **options)
-        return [@prefix, @dir, id].join('/')
+        [@host, @dir, id].join('/')
       end
 
       # Downloads the file
       def open(id)
-        Down.download(url(id))
+        ftp = connection
+        change_or_create_directory(ftp)
+        ftp.getbinaryfile(path_and_file, id)
+        ftp.close
       end
 
-      # Returns a boolean based on whether the file exists/
       def exists?(id)
-        uri = URI(url(id))
-        request = Net::HTTP.new uri.host
-        response = request.request_head uri.path
-        return response.code.to_i != 404
+        ftp = connection
+        begin
+          ftp.size(id)
+        rescue FTPReplyError => e
+          reply = e.message
+          err_code = reply[0,3].to_i
+          unless err_code == 500 || err_code == 502
+            # other problem, raise
+            raise
+          end
+          # fallback solution
+        end
+        ftp.close
+        true
       end
 
       # Deletes the file via FTP.
       def delete(id)
         if exists?(id)
-          ftp = Net::FTP.open(@host, @user, @passwd)
+          ftp = connection
           change_or_create_directory(ftp)
           ftp.delete(id)
+          ftp.close
           return true
         end
         return false
